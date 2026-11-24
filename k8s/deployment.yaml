@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pingboard
+  labels:
+    app: pingboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pingboard
+  template:
+    metadata:
+      labels:
+        app: pingboard-api
+    spec:
+      containers:
+        - name: pingboard
+          image: pingboard:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          env:
+            - name: PORT
+              value: "8080"
+            - name: APP_ENV
+              value: production
+            - name: STARTUP_DELAY_SECONDS
+              value: "10"
+            - name: API_TOKEN
+              value: changeme-super-secret
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            failureThreshold: 1
