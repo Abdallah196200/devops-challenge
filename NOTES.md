@@ -10,7 +10,7 @@
 - App: 401 for missing/wrong token, `hmac.compare_digest`, debug off. Behaviour otherwise matches the README table.
 - Dockerfile: `python:3.12-slim`, deps installed before code for caching, only `app/` copied, non-root uid 10001, gunicorn, HEALTHCHECK, no secret (token passed at runtime). Runtime and dev requirements split and pinned.
 - CI: lint (flake8) and pytest on push and PR, then image build plus a smoke test (healthz 200, checks 401 without token, 200 with token). Fails on any lint or test failure.
-- Kubernetes: matching labels/selectors, named port, startup/liveness/readiness probes (readiness uses `/readyz`), token from a Secret, 2 replicas, resource requests/limits, non-root, read-only root FS, dropped capabilities, `IfNotPresent`.
+- Kubernetes: matching labels/selectors, named port, startup/liveness/readiness probes (readiness uses `/readyz`), token from a Secret created at deploy time (no secret committed), 2 replicas, resource requests/limits, non-root, read-only root FS, dropped capabilities, `IfNotPresent`.
 
 ## How I verified it
 - `pytest`: 5 passed. `flake8`: clean. Ran the app under gunicorn locally: healthz ok, checks 401/200 as expected.
@@ -19,6 +19,7 @@
 Commands to run on kind:
     docker build -t pingboard:1.0.0 .
     kind create cluster && kind load docker-image pingboard:1.0.0
+    kubectl create secret generic pingboard --from-literal=API_TOKEN=dev-token
     kubectl apply -f k8s/
     kubectl rollout status deploy/pingboard
     kubectl port-forward svc/pingboard 8080:80
@@ -26,7 +27,7 @@ Commands to run on kind:
     curl -H "Authorization: Bearer dev-token" localhost:8080/api/checks
 
 ## What I left out, and what I would do next
-- The Secret in `k8s/secret.yaml` is a demo value; production needs sealed/external secrets.
+- The Secret is created by hand (no secret in git); production needs sealed/external secrets.
 - Pin the base image by digest, add image scanning in CI, HPA, PodDisruptionBudget, NetworkPolicy, a pinned-version bot.
 
 ## Tools and time

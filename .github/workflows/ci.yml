@@ -38,3 +38,28 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/api/checks)" = 401
           curl -fsS -H "Authorization: Bearer ci-token" localhost:8080/api/checks
           docker rm -f pb
+
+  k8s:
+    runs-on: ubuntu-latest
+    needs: image
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t pingboard:1.0.0 .
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+      - name: Load image and deploy
+        run: |
+          kind load docker-image pingboard:1.0.0 --name chart-testing
+          kubectl create secret generic pingboard --from-literal=API_TOKEN="$(openssl rand -hex 16)"
+          kubectl apply -f k8s/
+          kubectl rollout status deploy/pingboard --timeout=120s
+      - name: Check service and restarts
+        run: |
+          kubectl get pods -o wide
+          kubectl port-forward svc/pingboard 8080:80 >/tmp/pf.log 2>&1 &
+          sleep 3
+          curl -fsS localhost:8080/healthz
+          TOKEN=$(kubectl get secret pingboard -o jsonpath='{.data.API_TOKEN}' | base64 -d)
+          curl -fsS -H "Authorization: Bearer $TOKEN" localhost:8080/api/checks
+          test "$(kubectl get pods -l app=pingboard -o jsonpath='{.items[*].status.containerStatuses[*].restartCount}' | tr ' ' '+' | bc)" = 0
