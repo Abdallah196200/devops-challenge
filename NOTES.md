@@ -32,5 +32,5 @@ Commands to reproduce on kind:
 - Pin the base image by digest, add image scanning in CI, HPA, PodDisruptionBudget, NetworkPolicy, a pinned-version bot.
 
 ## Tools and time
-- Time spent: about 25 minutes of AI assistant work (investigation, fixes, CI iterations). Time for my own review: [to be filled in by Abdallah].
-- Tools: AI assistant (Instinct) did the investigation and drafting of the changes; Abdallah to review and understand them before submitting.
+- Time spent: about 20 minutes of AI assistant work (25 Nov 2026, 12:48 to 13:08 Cairo time): reading the repo, fixing, and iterating on CI until it was green. This is the assistant's elapsed time, not a human's.
+- Tools: an AI assistant (Instinct) did the investigation, the fixes, the CI work and the testing (local pytest/flake8/gunicorn, then GitHub Actions with Docker and kind). The submitter has not yet reviewed these changes line by line as of this commit.
