@@ -1,4 +1,5 @@
 """pingboard - a tiny uptime-check API used for the CloudAid DevOps challenge."""
+import hmac
 import os
 import time
 
@@ -42,8 +43,9 @@ def create_app():
     def checks():
         token = os.environ.get("API_TOKEN", "")
         header = request.headers.get("Authorization", "")
-        if not token or header != f"Bearer {token}":
-            return jsonify(error="unauthorized"), 403
+        # Constant-time compare; missing/wrong token is 401 per the README spec.
+        if not token or not hmac.compare_digest(header, f"Bearer {token}"):
+            return jsonify(error="unauthorized"), 401
         return jsonify(checks=CHECKS)
 
     return app
@@ -52,4 +54,5 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8080")), debug=True)
+    # Local dev only. Containers run under gunicorn; debug stays off.
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8080")))
