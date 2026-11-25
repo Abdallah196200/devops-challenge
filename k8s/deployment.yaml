@@ -5,34 +5,69 @@ metadata:
   labels:
     app: pingboard
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: pingboard
   template:
     metadata:
       labels:
-        app: pingboard-api
+        app: pingboard
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: pingboard
-          image: pingboard:latest
-          imagePullPolicy: Always
+          image: pingboard:1.0.0
+          # Image is loaded into kind (see NOTES.md), never pulled.
+          imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 5000
+            - name: http
+              containerPort: 8080
           env:
             - name: PORT
               value: "8080"
             - name: APP_ENV
               value: production
+            - name: APP_VERSION
+              value: "1.0.0"
             - name: STARTUP_DELAY_SECONDS
               value: "10"
             - name: API_TOKEN
-              value: changeme-super-secret
+              valueFrom:
+                secretKeyRef:
+                  name: pingboard
+                  key: API_TOKEN
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
           livenessProbe:
             httpGet:
-              path: /health
-              port: 5000
-            initialDelaySeconds: 1
-            periodSeconds: 2
-            failureThreshold: 1
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
