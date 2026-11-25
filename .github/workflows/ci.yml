@@ -54,6 +54,12 @@ jobs:
           kubectl create secret generic pingboard --from-literal=API_TOKEN="$(openssl rand -hex 16)"
           kubectl apply -f k8s/
           kubectl rollout status deploy/pingboard --timeout=120s
+      - name: Debug on failure
+        if: failure()
+        run: |
+          kubectl get pods -o wide
+          kubectl describe pods
+          kubectl logs -l app=pingboard --tail=50
       - name: Check service and restarts
         run: |
           kubectl get pods -o wide

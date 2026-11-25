@@ -71,3 +71,11 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
+          # gunicorn writes worker heartbeat files to /tmp, which must be writable
+          # when the root filesystem is read-only.
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
