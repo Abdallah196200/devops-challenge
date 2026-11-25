@@ -68,4 +68,6 @@ jobs:
           curl -fsS localhost:8080/healthz
           TOKEN=$(kubectl get secret pingboard -o jsonpath='{.data.API_TOKEN}' | base64 -d)
           curl -fsS -H "Authorization: Bearer $TOKEN" localhost:8080/api/checks
-          test "$(kubectl get pods -l app=pingboard -o jsonpath='{.items[*].status.containerStatuses[*].restartCount}' | tr ' ' '+' | bc)" = 0
+          RESTARTS=$(kubectl get pods -l app=pingboard -o jsonpath='{range .items[*]}{.status.containerStatuses[0].restartCount}{"\n"}{end}' | awk '{s+=$1} END {print s+0}')
+          echo "total restarts: $RESTARTS"
+          test "$RESTARTS" -eq 0
