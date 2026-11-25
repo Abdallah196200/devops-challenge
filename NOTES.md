@@ -13,10 +13,11 @@
 - Kubernetes: matching labels/selectors, named port, startup/liveness/readiness probes (readiness uses `/readyz`), token from a Secret created at deploy time (no secret committed), 2 replicas, resource requests/limits, non-root, read-only root FS, dropped capabilities, `IfNotPresent`.
 
 ## How I verified it
-- `pytest`: 5 passed. `flake8`: clean. Ran the app under gunicorn locally: healthz ok, checks 401/200 as expected.
-- NOT YET RUN: `docker build`, GitHub Actions run, kind cluster deploy. (To fill in before submitting.)
+- Locally: `pytest` 5 passed, `flake8` clean, app under gunicorn: `/healthz` 200, `/api/checks` 401 without token and 200 with it.
+- In GitHub Actions on this branch (jobs: test, image, k8s): lint and tests pass; `docker build` succeeds and a smoke test of the container passes; a kind cluster deploys the manifests, both pods become Ready with 0 restarts, `/healthz` and token-protected `/api/checks` answer through `kubectl port-forward`.
+- Two bugs only showed up when the cluster ran (see history): pods never became Ready because gunicorn needs a writable `/tmp` with a read-only root filesystem (fixed with an emptyDir), and my restart-count check used `bc`, which the runner does not have.
 
-Commands to run on kind:
+Commands to reproduce on kind:
     docker build -t pingboard:1.0.0 .
     kind create cluster && kind load docker-image pingboard:1.0.0
     kubectl create secret generic pingboard --from-literal=API_TOKEN=dev-token
@@ -31,5 +32,5 @@ Commands to run on kind:
 - Pin the base image by digest, add image scanning in CI, HPA, PodDisruptionBudget, NetworkPolicy, a pinned-version bot.
 
 ## Tools and time
-- Time spent: [to fill in honestly by Abdallah].
+- Time spent: about 25 minutes of AI assistant work (investigation, fixes, CI iterations). Time for my own review: [to be filled in by Abdallah].
 - Tools: AI assistant (Instinct) did the investigation and drafting of the changes; Abdallah to review and understand them before submitting.
